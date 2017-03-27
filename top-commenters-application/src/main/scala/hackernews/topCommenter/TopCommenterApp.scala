@@ -33,7 +33,7 @@ object TopCommenterApp extends App {
                 println(s"\t${"%3d".format(index+1)} - ${commenter.name} : ${commenter.nbComment} comments (${"%1.2f".format(commenter.commentingProportionInPercentage)}%)")}
             if(topCommenterResult.hasFailures){
                 println("> Hacker news api failures not recoverable : ")
-                topCommenterResult.failures.foreach(failure => println(s"${failure}"))
+                topCommenterResult.failures.foreach(failure => println(s"\t - ${failure}"))
             }
             println("---------------------------------")
             closeApplication()
