@@ -2,42 +2,42 @@ package hackernews.client
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import akka.http.scaladsl.Http.HostConnectionPool
+import akka.http.scaladsl.{Http, HttpExt}
 import akka.http.scaladsl.client.RequestBuilding.{Get, addHeader}
-import akka.http.scaladsl.model.MediaTypes
+import akka.http.scaladsl.model.{Uri, _}
 import akka.http.scaladsl.model.headers.Accept
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Flow, Keep, Source}
 import hackernews.core._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import hackernews.protocol.ClientJsonFormat._
 import spray.json.DefaultJsonProtocol._
 
 import scala.concurrent.ExecutionContext
-import scala.util.{Either, Left, Right}
+import scala.util.{Either, Left, Right, Try}
 
 trait HackerNewsClient {
   def getCommentsFromTopStories(max : Int) : Source[Either[ClientFailure,Comment],NotUsed]
 }
 
-
 class HackerNewsHttpClient (baseUrl : String)
                        (implicit ec: ExecutionContext, system: ActorSystem, materializer: Materializer)
-  extends HackerNewsClient with ResponseTransformation {
+  extends HackerNewsClient with ResponseTransformation  {
 
   val connection = Http().outgoingConnectionHttps(baseUrl)
 
   def getCommentsFromTopStories(max : Int) : Source[Either[ClientFailure,Comment],NotUsed] = {
-    Source.single(Get("/v0/topstories.json"))
-      .map(addHeader(Accept(MediaTypes.`application/json`)))
-      .via(connection)
-      .via(unmarshallTo[List[Int]])
-      .map(_.take(max))
-      .flatMapConcat(list => Source(list))
-      .flatMapMerge(max,getCommentsFromStory)
+      Source.single(Get("/v0/topstories.json"))
+          .map(addHeader(Accept(MediaTypes.`application/json`)))
+            .via(connection)
+            .via(unmarshallTo[List[Int]])
+            .map(_.take(max))
+            .flatMapConcat(list => Source(list))
+            .flatMapMerge(max,storyId => getCommentsFromStory(storyId))
   }
 
-  def getCommentsFromStory(storyId: Int) : Source[Either[ClientFailure,Comment],NotUsed] = {
+  def getCommentsFromStory(storyId: Int,retry : Int = 5 ) : Source[Either[ClientFailure,Comment],NotUsed] = {
     Source.single(Get(s"/v0/item/${storyId}.json"))
       .map(addHeader(Accept(MediaTypes.`application/json`)))
       .via(connection)
@@ -46,7 +46,8 @@ class HackerNewsHttpClient (baseUrl : String)
       .map(_.asInstanceOf[StoryCommented])
       .flatMapConcat{story => Source(story.commentIds)
         .flatMapMerge(story.commentIds.size,commentId => getCommentAndHisReplies(commentId = commentId))}
-      .recoverWithRetries(1,{ case error  => getCommentsFromStory(storyId)})
+      .recoverWithRetries(retry,{ case error  => getCommentsFromStory(storyId,retry -1)})
+      .recover{case error => Left(GetStoryFailed(storyId,error))}
   }
 
 
@@ -70,5 +71,6 @@ class HackerNewsHttpClient (baseUrl : String)
 
 object HackerNewsHttpClient {
   def apply() (implicit ec: ExecutionContext, system: ActorSystem, materializer: Materializer)
-  : HackerNewsHttpClient = { new HackerNewsHttpClient("hacker-news.firebaseio.com")}
+  : HackerNewsHttpClient = {
+    new HackerNewsHttpClient("hacker-news.firebaseio.com")}
 }
