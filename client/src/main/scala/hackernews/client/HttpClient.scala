@@ -69,7 +69,6 @@ class HackerNewsHttpClient (baseUrl : String)
 }
 
 object HackerNewsHttpClient {
-
-  def provide() (implicit ec: ExecutionContext, system: ActorSystem, materializer: Materializer)
+  def apply() (implicit ec: ExecutionContext, system: ActorSystem, materializer: Materializer)
   : HackerNewsHttpClient = { new HackerNewsHttpClient("hacker-news.firebaseio.com")}
 }

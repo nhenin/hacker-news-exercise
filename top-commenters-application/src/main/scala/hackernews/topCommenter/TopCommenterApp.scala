@@ -17,7 +17,7 @@ object TopCommenterApp extends App {
     implicit val materializer = ActorMaterializer()
     import system.dispatcher
 
-    val analytics = new Analytics(HackerNewsHttpClient.provide())
+    val analytics = new Analytics(HackerNewsHttpClient())
     val nbTopStories = 30
     val nbTopCommenters = 10
     analytics.getTopCommenters(nbTopCommenters,nbTopStories) onComplete {
@@ -37,7 +37,8 @@ object TopCommenterApp extends App {
             }
             println("---------------------------------")
             closeApplication()
-        case Failure(t) => println("> An error has occured: " + t)
+        case Failure(t) =>
+            println("> An error has occured: " + t)
             closeApplication()
     }
 
