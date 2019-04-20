@@ -8,7 +8,6 @@ object CompilationDefaults {
     Seq(
       organization := "hackernews",
       scalaVersion := buildScalaVersion,
-      incOptions := incOptions.value.withNameHashing(true),
       scalacOptions ++= Seq(
         "-feature",
         "-language:postfixOps"

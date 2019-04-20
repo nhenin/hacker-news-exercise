@@ -20,12 +20,14 @@ object TopCommenterApp extends App {
     val analytics = new Analytics(HackerNewsHttpClient())
     val nbTopStories = 30
     val nbTopCommenters = 10
+
+    println("---------------------------------")
+    println("Subject : print the title of the top 30 hacker news stories and the top 10 commenter names " +
+      "of these stories with the total number of comments that they posted (only for these 30 stories).")
+    println("---------------------------------")
+
     analytics.getTopCommenters(nbTopCommenters,nbTopStories) onComplete {
         case Success(topCommenterResult) =>
-            println("---------------------------------")
-            println("Subject : print the title of the top 30 hacker news stories and the top 10 commenter names " +
-                    "of these stories with the total number of comments that they posted (only for these 30 stories).")
-            println("---------------------------------")
             println(s"> Total comments for ${nbTopStories} top stories : ${topCommenterResult.nbComments}")
             println(s"> Total anonymous comments : ${topCommenterResult.nbAnonymousComments} (${"%1.2f".format(topCommenterResult.nbAnonymousCommentsPercentage)}%)")
             println(s"> Top Commenters : ")
